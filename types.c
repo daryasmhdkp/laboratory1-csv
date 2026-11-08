@@ -40,8 +40,16 @@ ValueType type_identifier(const char *value, int quoted) {
         else return TYPE_DOUBLE;
     }
     if (count_before_dot == 0) return TYPE_STRING;
-    else if (dot == 0) return TYPE_INT;
-
+    else if (dot == 0) {
+        int start = 0;
+        while (value[start] == '0') start+=1;
+        int len = strlen(value + start);
+        if (len > 19) return TYPE_STRING;
+        if (len == 19) {
+            if (strcmp(value+start, "9223372036854775807") > 0) return TYPE_STRING;
+        }
+    return TYPE_INT;
+    }
     return TYPE_STRING;
 }
 
