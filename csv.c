@@ -51,6 +51,11 @@ CsvField* csv_read_one_line(FILE *file, int *field_count) {
                     // это не экранирование а просто конец поля в кавычках
                     are_we_in_quotes = 0; // кавычки закончились кавычку не добавляем
                     ungetc(next_c, file); // возвращаем символ с в поток
+                    int look = fgetc(file);
+                    while (look == ' ' || look == '\t') {
+                        look = fgetc(file);
+                    }
+                    ungetc(look, file);
                 }
             }
         }
@@ -104,7 +109,7 @@ CsvField* csv_read_one_line(FILE *file, int *field_count) {
         }
         else { // встретили ЛЮБОЙ другой символ
             if (is_it_the_first_char_of_fields == 1 && (c == ' ' || c == '\t')) {
-                is_it_the_first_char_of_fields = 0;
+                //is_it_the_first_char_of_fields = 0;
             }
             else { 
                 if (word_capacity <= current_word_length) {
@@ -118,25 +123,28 @@ CsvField* csv_read_one_line(FILE *file, int *field_count) {
         }
         c = fgetc(file); // читаем элементы
     } // end of while
-    fields = check_and_extend(fields, &fields_capacity, *field_count);
-    if (fields == NULL) return NULL;
-    if (quoted == 0) {
+
+    if (current_word_length > 0 || quoted == 1 || *field_count == 0) {
+        fields = check_and_extend(fields, &fields_capacity, *field_count);
+        if (fields == NULL) return NULL;
         while (current_word_length > 0 && (word[0] == ' ' || word[0] == '\t')) {
             for(int i = 0; i < current_word_length; i++) {
                 word[i] = word[i+1];
             }
             current_word_length-=1;
         }
-        while (current_word_length > 0 && 
-                        (word[current_word_length-1] == ' ' || word[current_word_length-1] == '\t')) {
-                        current_word_length-=1;
-                    }
-                    word[current_word_length] = '\0';
-                }
-                
-    fields[*field_count].quoted = quoted;
-    fields[*field_count].type = 0; 
-    fields[*field_count].value = word;
-    (*field_count)++;
+        while (current_word_length > 0 && (word[current_word_length-1] == ' ' || 
+            word[current_word_length-1] == '\t')) {
+                current_word_length-=1;
+            }
+            word[current_word_length] = '\0';
+        fields[*field_count].quoted = quoted;
+        fields[*field_count].type = 0; 
+        fields[*field_count].value = word;
+        (*field_count)++;
+    }
+    else {
+        free(word);
+    }
     return fields;
 }
