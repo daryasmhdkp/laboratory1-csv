@@ -38,7 +38,13 @@ void stats_realisation(FILE *file) {
         count_of_lines+=1;
         for(int i = 0; i < current_columns; i++) {
             current_type = type_identifier(current_line[i].value, current_line[i].quoted);
-            statistics[i].type = column_type(statistics[i].type, current_type);
+            ValueType old_type = statistics[i].type;
+            statistics[i].type = column_type(old_type, current_type);
+            if (old_type == TYPE_INT && statistics[i].type == TYPE_DOUBLE) {
+                statistics[i].sum_double = (double)statistics[i].sum_int;
+                statistics[i].min_number_double = (double)statistics[i].min_number_int;
+                statistics[i].max_number_double = (double)statistics[i].max_number_int;
+            }
             if (current_type == TYPE_NULL) statistics[i].nulls_count+=1;
             else if (current_type == TYPE_STRING) {
                 statistics[i].meaningful_numbers_count+=1;
@@ -52,12 +58,32 @@ void stats_realisation(FILE *file) {
             else if (current_type == TYPE_INT) {
                 statistics[i].meaningful_numbers_count+=1;
                 long long number = atoll(current_line[i].value); // array to long long
-                statistics[i].sum_int+=number;
+                //statistics[i].sum_int+=number;
                 if (number > 0) statistics[i].positive_count_numbers+=1;
                 if (number < 0) statistics[i].negative_count_numbers+=1;
                 if (number % 2 == 0) statistics[i].even_count_numbers_int+=1;
-                if (statistics[i].max_number_int < number) statistics[i].max_number_int = number;
-                if (statistics[i].min_number_int > number) statistics[i].min_number_int = number;
+                statistics[i].integers_whole_number_for_DOUBLE+=1;
+
+                if (statistics[i].type == TYPE_DOUBLE) {
+                    statistics[i].sum_double += (double)(number);
+                    if (statistics[i].max_number_double < (double)number) {
+                        statistics[i].max_number_double = (double)number;
+                    }
+                    if (statistics[i].min_number_double > (double)number) {
+                        statistics[i].min_number_double = (double)number;
+                    }
+                   
+                    
+                }
+                else {
+                    statistics[i].sum_int+=number;
+                    if (statistics[i].max_number_int < number) {
+                        statistics[i].max_number_int = number;
+                    }
+                    if (statistics[i].min_number_int > number) {
+                        statistics[i].min_number_int = number;
+                    }
+                }
             }
             else if (current_type == TYPE_DOUBLE) {
                 statistics[i].meaningful_numbers_count+=1;
@@ -130,10 +156,12 @@ void stats_realisation(FILE *file) {
             printf("name \"%s\"\n", header[i].value);
             printf("type DOUBLE\n");
             printf("nulls %d\n", statistics[i].nulls_count);
-            if (statistics[i].min_number_double == 0.0) statistics[i].min_number_double  = 0.0;
-            if (statistics[i].max_number_double  == 0.0) statistics[i].max_number_double  = 0.0;
-            printf("min %f\n", statistics[i].min_number_double);
-            printf("max %f\n", statistics[i].max_number_double);
+            double min = statistics[i].min_number_double + 0.0;
+            double max = statistics[i].max_number_double + 0.0;
+            if (min == 0.0) min = 0.0;
+            if (max  == 0.0) max = 0.0;
+            printf("min %f\n", min);
+            printf("max %f\n", max);
             double domean = 0;
             if (statistics[i].meaningful_numbers_count != 0) {
                 domean = statistics[i].sum_double / statistics[i].meaningful_numbers_count;
